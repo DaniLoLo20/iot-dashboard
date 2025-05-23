@@ -115,31 +115,35 @@
     let connectedCount = 0;
     let disconnectedCount = 0;
 
-    for (const id of devices) {
-      const data = await loadStatus(id);
-      const statusClass = data.IsConnected ? 'text-success' : 'text-danger';
-      const statusText = data.IsConnected ? 'Conectado ✅' : 'No conectado ❌';
-      const timestamp = new Date(Number(data.Timestamp)).toLocaleString();
+   for (const id of devices) {
+  const data = await loadStatus(id);
+  const count = await loadCommandCount(id); // 👈 Aquí cargas el contador
 
-      if (data.IsConnected) connectedCount++;
-      else {
-        disconnectedCount++;
-        notifyDisconnect(data.DeviceId);
-      }
+  const statusClass = data.IsConnected ? 'text-success' : 'text-danger';
+  const statusText = data.IsConnected ? 'Conectado ✅' : 'No conectado ❌';
+  const timestamp = new Date(Number(data.Timestamp)).toLocaleString();
 
-      cardContainer.innerHTML += `
-        <div class="col-12 col-sm-12 col-md-6 col-lg-4 mb-4">
-          <div class="card shadow-sm border-start border-4 ${data.IsConnected ? 'border-success' : 'border-danger'}">
-            <div class="card-body">
-              <h5 class="card-title">${data.DeviceId}</h5>
-              <p class="card-text ${statusClass}"><strong>${statusText}</strong></p>
-              <p class="card-text"><small class="text-muted">Actualizado: ${timestamp}</small></p>
-              <button class="btn btn-outline-primary btn-sm" onclick="refreshDevice('${data.DeviceId}')">🔄 Actualizar</button>
-            </div>
-          </div>
+  if (data.IsConnected) connectedCount++;
+  else {
+    disconnectedCount++;
+    notifyDisconnect(data.DeviceId);
+  }
+
+  cardContainer.innerHTML += `
+    <div class="col-12 col-sm-12 col-md-6 col-lg-4 mb-4">
+      <div class="card shadow-sm border-start border-4 ${data.IsConnected ? 'border-success' : 'border-danger'}">
+        <div class="card-body">
+          <h5 class="card-title">${data.DeviceId}</h5>
+          <p class="card-text ${statusClass}"><strong>${statusText}</strong></p>
+          <p class="card-text"><small class="text-muted">Actualizado: ${timestamp}</small></p>
+          <p class="card-text">🚿 Lavados hoy: <strong>${count}</strong></p>
+          <button class="btn btn-outline-primary btn-sm" onclick="refreshDevice('${data.DeviceId}')">🔄 Actualizar</button>
         </div>
-      `;
-    }
+      </div>
+    </div>
+  `;
+}
+
 
     document.getElementById("summary").innerHTML = `
       ✅ Conectados: ${connectedCount} | ❌ Desconectados: ${disconnectedCount}
@@ -158,6 +162,22 @@
       document.getElementById("newDeviceId").value = "";
     }
   };
+
+  const loadCommandCount = async (deviceId) => {
+  try {
+    const res = await fetch('/api/contador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId })
+    });
+    const data = await res.json();
+    return data.count || 0;
+  } catch (err) {
+    console.error('Error al cargar contador:', err);
+    return 0;
+  }
+};
+
 
   updateTable();
   setInterval(updateTable, 30000);
