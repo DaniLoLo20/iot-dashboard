@@ -3,6 +3,22 @@ const bodyParser = require('body-parser');
 const fetch = require('node-fetch'); // <- esto importa correctamente fetch
 const app = express();
 const PORT = process.env.PORT || 3000;
+const fs = require('fs');
+const path = require('path');
+
+const contadorPath = path.join(__dirname, 'contador.json');
+
+function leerContadores() {
+  if (!fs.existsSync(contadorPath)) {
+    return {};
+  }
+  const data = fs.readFileSync(contadorPath);
+  return JSON.parse(data);
+}
+
+function guardarContadores(contadores) {
+  fs.writeFileSync(contadorPath, JSON.stringify(contadores, null, 2));
+}
 
 
 app.use(bodyParser.json());
@@ -28,5 +44,22 @@ app.post('/api/status', async (req, res) => {
     res.status(500).json({ error: 'Error al consultar el estado del dispositivo' });
   }
 });
+
+app.post('/api/contador', (req, res) => {
+  const { deviceId } = req.body;
+  const contadores = leerContadores();
+  const count = contadores[deviceId] || 0;
+  res.json({ deviceId, count });
+});
+app.post('/api/contador/incrementar', (req, res) => {
+  const { deviceId, comando } = req.body;
+
+  const contadores = leerContadores();
+  contadores[deviceId] = (contadores[deviceId] || 0) + 1;
+  guardarContadores(contadores);
+
+  res.json({ success: true, count: contadores[deviceId] });
+});
+
 
 app.listen(PORT, () => console.log(`Servidor corriendo en http://localhost:${PORT}`));
